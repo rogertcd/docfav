@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  mariadb:
+    #    image: docker.io/bitnami/mariadb:10.9
+    #    image: mariadb:10.9
+    build: './build/mariadb'
+    container_name: '${COMPOSE_PROJECT_NAME}-database'
+    ports:
+      - ${HOST_MACHINE_MARIADB_PORT}:3306
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+    #    command: --default-authentication-plugin=caching_sha2_password
+    volumes:
+      #      - ${MARIADB_DATA_DIR}:/bitnami/mariadb
+      - ${MARIADB_DATA_DIR}:/var/lib/mysql
+      - ${MARIADB_DUMP_DIR}:/docker-entrypoint-initdb.d
+    networks:
+      - docfav
+  www:
+    image: docker.io/bitnami/laravel:9
+    #    build: './build/php'
+    container_name: '${COMPOSE_PROJECT_NAME}-laravel'
+    ports:
+      - "${HOST_MACHINE_UNSECURE_HOST_PORT}:8000"
+    environment:
+      - DB_HOST=mariadb
+      - DB_PORT=${HOST_MACHINE_MARIADB_PORT}
+      - DB_USERNAME=${MARIADB_USER}
+      - DB_PASSWORD=${MARIADB_PASSWORD}
+      - DB_DATABASE=${MARIADB_DATABASE}
+    volumes:
+      - ${DOCUMENT_ROOT}:/app
+      - ${PHP_INI-./config/php/php.ini}:/usr/local/etc/php/php.ini
+      - ${VHOSTS_DIR-./config/vhosts}:/etc/apache2/sites-enabled
+      - ${LOG_DIR-./logs/apache2}:/var/log/apache2
+    depends_on:
+      - mariadb
+    networks:
+      - docfav
+networks:
+  docfav:
